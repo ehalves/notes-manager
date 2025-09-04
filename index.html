@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dex Notes – Bloco de Notas (GitHub)</title>
+  <title>Dex Notes – Bloco de Notas (GitHub) v2</title>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
   <style>
@@ -31,7 +31,7 @@
     }
     header .brand { display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.3px; }
     header .brand .dot { width:10px; height:10px; border-radius:50%; background: var(--accent); box-shadow: 0 0 16px var(--accent); }
-    header .actions { display:flex; gap:8px; }
+    header .actions { display:flex; gap:8px; flex-wrap: wrap; }
     button, .btn {
       appearance:none; border:1px solid var(--border); background:#111827; color:#e5e7eb;
       padding:10px 12px; border-radius:12px; cursor:pointer; font-weight:600; transition: .2s ease; box-shadow: var(--shadow);
@@ -45,31 +45,33 @@
 
     .card { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
     .toolbar-wrap { padding: 8px; border-bottom: 1px solid var(--border); background:#0b1220; }
-    #titleInput {
-      width:100%; background:transparent; color:#e5e7eb; border:none; outline:none; font-size:22px; font-weight:700; padding: 16px 16px 10px;
+    #titleRow { display:grid; grid-template-columns: 1fr 220px 1fr; gap:10px; align-items:center; padding: 12px 12px 0; }
+    #titleInput { width:100%; background:transparent; color:#e5e7eb; border:none; outline:none; font-size:22px; font-weight:700; padding: 8px 8px; }
+    select, input[type="text"], input[type="password"], input[type="number"], .tag-input {
+      background:#0b1220; color:#e5e7eb; border:1px solid var(--border); border-radius: 12px; padding: 10px 12px;
     }
-    #editor { height: 52vh; }
+    .tag-input { width:100%; }
+
+    #editor { height: 48vh; }
 
     .statusbar { display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between; padding:10px 16px; border-top: 1px solid var(--border); background: #0b1220; font-size: 13px; color: var(--muted); }
     .stats { display:flex; gap:18px; align-items:center; }
     .stat { opacity:.9; }
-    .green { color: #86efac; }
-    .yellow { color: #fde68a; }
 
     .pill { padding: 8px 10px; border: 1px solid var(--border); border-radius: 999px; background: #0b1220; }
 
     .modal { position: fixed; inset: 0; display:none; align-items:center; justify-content:center; background: rgba(2,6,23,.6); backdrop-filter: blur(4px); z-index:50; }
     .modal.active { display:flex; }
-    .modal-card { width: min(720px, 92vw); background: var(--panel); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); }
+    .modal-card { width: min(900px, 94vw); background: var(--panel); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); }
     .modal-card header { position:relative; }
     .modal-body { padding: 18px; }
     .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     .field { display:flex; flex-direction:column; gap:6px; }
     label { font-size: 12px; color:#9ca3af; }
-    input[type="text"], input[type="password"], select { background:#0b1220; color:#e5e7eb; border:1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
 
+    .notes-top { display:grid; grid-template-columns: 1fr 160px 200px; gap:10px; margin-bottom:10px; }
     .notes-list { display:grid; grid-template-columns: 1fr; gap:10px; max-height: 60vh; overflow:auto; padding: 4px; }
-    .note-item { padding: 10px 12px; border:1px solid var(--border); border-radius: 12px; background:#0b1220; display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+    .note-item { padding: 10px 12px; border:1px solid var(--border); border-radius: 12px; background:#0b1220; display:grid; grid-template-columns: 1fr auto; gap:8px; cursor:pointer; }
     .note-item:hover { border-color:#374151; }
     .note-item small { color:#94a3b8; }
 
@@ -82,7 +84,9 @@
     <div class="brand"><span class="dot"></span> Dex Notes</div>
     <div class="actions">
       <button id="newBtn" title="Nova nota (Ctrl+N)">Nova</button>
-      <button id="openBtn" class="secondary" title="Abrir nota do GitHub">Abrir</button>
+      <button id="openBtn" class="secondary" title="Abrir/Buscar notas (offline)">Abrir</button>
+      <button id="syncBtn" class="secondary" title="Sincronizar com GitHub">Sincronizar</button>
+      <button id="exportBtn" title="Exportar ZIP">Exportar ZIP</button>
       <button id="saveBtn" class="primary" title="Salvar no GitHub (Ctrl+S)">Salvar</button>
       <button id="settingsBtn" title="Configurar GitHub">Configurações</button>
     </div>
@@ -90,11 +94,18 @@
 
   <div class="container">
     <div class="help">
-      <strong>Como funciona:</strong> escreva seu texto, formate (negrito, itálico, sublinhado, tachado, link) e salve direto em um repositório no GitHub. As configurações ficam salvas no seu navegador (localStorage). Use <span class="kbd">Ctrl</span>+<span class="kbd">S</span> para salvar e <span class="kbd">Ctrl</span>+<span class="kbd">N</span> para nova nota.
+      <strong>Como funciona:</strong> escreva, formate (negrito/itálico/sublinhado/tachado/link), organize por <strong>Projeto</strong> (pasta) e <strong>Tags</strong>, pesquise offline e sincronize com GitHub. Use <span class="kbd">Ctrl</span>+<span class="kbd">S</span> para salvar, <span class="kbd">Ctrl</span>+<span class="kbd">N</span> para nova nota.
     </div>
 
     <div class="card" id="editorCard">
-      <input id="titleInput" placeholder="Título da nota..." autocomplete="off" />
+      <div id="titleRow">
+        <input id="titleInput" placeholder="Título da nota..." autocomplete="off" />
+        <div style="display:flex; gap:8px; align-items:center;">
+          <select id="projectSelect" title="Projeto (pasta)"></select>
+          <button id="addProjectBtn" title="Novo projeto">+</button>
+        </div>
+        <input id="tagsInput" class="tag-input" placeholder="Tags separadas por vírgula (ex.: requisitos, cliente, sprint)" />
+      </div>
       <div class="toolbar-wrap">
         <div id="toolbar">
           <span class="ql-formats">
@@ -129,6 +140,7 @@
           <span class="stat">Tamanho: <strong id="fileSize">0 B</strong></span>
         </div>
         <div>
+          <span class="pill">Projeto: <strong id="projectBadge">–</strong></span>
           <span class="pill">Última alteração local: <span id="lastLocal">–</span></span>
           <span class="pill">Último salvamento no GitHub: <span id="lastSaved">–</span></span>
         </div>
@@ -140,7 +152,7 @@
   <div id="settingsModal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-card">
       <header>
-        <div class="brand" style="padding:12px 18px;">Configurações do GitHub</div>
+        <div class="brand" style="padding:12px 18px;">Configurações</div>
       </header>
       <div class="modal-body">
         <div class="grid">
@@ -157,7 +169,7 @@
             <input id="ghBranch" type="text" placeholder="main" value="main" />
           </div>
           <div class="field">
-            <label>Pasta das notas (caminho dentro do repo)</label>
+            <label>Pasta raiz das notas no repo</label>
             <input id="ghFolder" type="text" placeholder="notes" value="notes" />
           </div>
           <div class="field">
@@ -171,6 +183,13 @@
             <label>Token do GitHub (PAT) – escopo: <em>contents: read & write</em></label>
             <input id="ghToken" type="password" placeholder="ghp_..." />
           </div>
+          <div class="field">
+            <label>Auto-sync (minutos)</label>
+            <input id="autoSyncMins" type="number" min="0" step="1" value="10" />
+          </div>
+          <div class="field">
+            <label><input id="autoSaveGit" type="checkbox" /> Auto-salvar no GitHub quando houver alterações</label>
+          </div>
         </div>
         <div style="display:flex; gap:8px; margin-top:16px;">
           <button id="testConn" class="secondary">Testar conexão</button>
@@ -178,18 +197,23 @@
           <button id="closeSettings">Fechar</button>
         </div>
         <p style="margin-top:12px; color:#a3e635; font-size:13px;" id="settingsMsg"></p>
-        <p style="margin-top:8px; font-size:12px; color:#9ca3af">Dica de segurança: use um token de acesso pessoal <em>fine‑grained</em> limitado apenas a este repositório, com permissão de <strong>Repository contents: Read/Write</strong>. O token fica salvo somente no seu navegador (localStorage).</p>
+        <p style="margin-top:8px; font-size:12px; color:#9ca3af">Use um token <em>fine‑grained</em> limitado apenas ao repositório das notas, com permissão <strong>Repository contents: Read/Write</strong>. O token fica salvo somente no seu navegador (localStorage).</p>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Abrir notas -->
+  <!-- Modal: Abrir / Buscar notas (offline) -->
   <div id="openModal" class="modal" role="dialog" aria-modal="true">
     <div class="modal-card">
       <header>
-        <div class="brand" style="padding:12px 18px;">Minhas notas (GitHub)</div>
+        <div class="brand" style="padding:12px 18px;">Minhas notas (IndexedDB / GitHub)</div>
       </header>
       <div class="modal-body">
+        <div class="notes-top">
+          <input id="searchInput" type="text" placeholder="Buscar: texto ou #tag (ex.: #sprint)" />
+          <select id="filterProject"></select>
+          <button id="syncNow" class="secondary">Sincronizar do GitHub</button>
+        </div>
         <div class="notes-list" id="notesList"></div>
         <div style="display:flex; gap:8px; margin-top:16px;">
           <button id="reloadNotes" class="secondary">Recarregar lista</button>
@@ -203,14 +227,17 @@
   <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/turndown@7.2.0/dist/turndown.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   <script>
     // ===== Util =====
     const $ = (sel) => document.querySelector(sel);
     const nowFmt = () => new Date().toLocaleString();
+    const isoNow = () => new Date().toISOString();
     const debounce = (fn, ms=400) => { let t; return (...a)=>{clearTimeout(t); t=setTimeout(()=>fn(...a),ms)} };
 
     const storage = {
-      get k(){ return 'dexnotes.v1'; },
+      get k(){ return 'dexnotes.v2'; },
       read(){ try{ return JSON.parse(localStorage.getItem(this.k) || '{}'); }catch{ return {}; } },
       write(data){ localStorage.setItem(this.k, JSON.stringify(data)); },
       set(path, value){ const s=this.read(); s[path]=value; this.write(s); },
@@ -233,6 +260,73 @@
       return new TextDecoder().decode(buf);
     }
 
+    // ===== IndexedDB (offline robust) =====
+    let dbPromise = new Promise((resolve, reject)=>{
+      const req = indexedDB.open('dexnotes.db', 2);
+      req.onupgradeneeded = (e)=>{
+        const db = req.result;
+        if(!db.objectStoreNames.contains('notes')){
+          const st = db.createObjectStore('notes', { keyPath: 'path' });
+          st.createIndex('project','project',{unique:false});
+          st.createIndex('updated','updated',{unique:false});
+        } else {
+          const st = req.transaction.objectStore('notes');
+          if(!st.indexNames.contains('project')) st.createIndex('project','project',{unique:false});
+          if(!st.indexNames.contains('updated')) st.createIndex('updated','updated',{unique:false});
+        }
+      };
+      req.onsuccess = ()=> resolve(req.result);
+      req.onerror = ()=> reject(req.error);
+    });
+
+    async function idbPutNote(obj){ const db = await dbPromise; return new Promise((res,rej)=>{ const tx=db.transaction('notes','readwrite'); tx.objectStore('notes').put(obj); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+    async function idbGetNote(path){ const db = await dbPromise; return new Promise((res,rej)=>{ const tx=db.transaction('notes','readonly'); const r=tx.objectStore('notes').get(path); r.onsuccess=()=>res(r.result||null); r.onerror=()=>rej(r.error); }); }
+    async function idbAllNotes(){ const db = await dbPromise; return new Promise((res,rej)=>{ const tx=db.transaction('notes','readonly'); const st=tx.objectStore('notes'); const arr=[]; st.openCursor().onsuccess=(e)=>{ const c=e.target.result; if(c){ arr.push(c.value); c.continue(); } else res(arr); }; tx.onerror=()=>rej(tx.error); }); }
+
+    async function idbListProjects(){ const all = await idbAllNotes(); const set=new Set(all.map(n=>n.project||'')); return Array.from(set).sort(); }
+
+    function extractMetaFromMarkdown(md, path){
+      let meta = { title:'', tags:[], project: projectFromPath(path), created:null, updated:null };
+      if(md.startsWith('---')){
+        const end = md.indexOf('\n---');
+        if(end>3){
+          const block = md.slice(3,end).trim();
+          block.split('\n').forEach(line=>{
+            const [k,...rest] = line.split(':');
+            const key=(k||'').trim(); const v = rest.join(':').trim();
+            const strip=(s)=>s.replace(/^['"]|['"]$/g,'');
+            if(key==='title') meta.title = strip(v);
+            if(key==='project') meta.project = strip(v);
+            if(key==='created') meta.created = strip(v);
+            if(key==='updated') meta.updated = strip(v);
+            if(key==='tags'){
+              const inside = v.replace(/^\[|\]$/g,'');
+              meta.tags = inside? inside.split(',').map(t=>strip(t.trim())).filter(Boolean) : [];
+            }
+          });
+          md = md.slice(end+4);
+        }
+      }
+      if(!meta.title){ const m = md.match(/^#\s+(.+)$/m); if(m) meta.title = m[1].trim(); }
+      if(!meta.title){ meta.title = filenameFromPath(path); }
+      return { meta, body: md };
+    }
+
+    function extractMetaFromHTML(html, path){
+      let meta = { title:'', tags:[], project: projectFromPath(path), created:null, updated:null };
+      const m = html.match(/<meta[^>]+name=["']dexnotes["'][^>]+content=["']([^"']+)["'][^>]*>/i);
+      if(m){ try{ const j = JSON.parse(m[1]); Object.assign(meta, j); }catch{} }
+      if(!meta.title){ const t = html.match(/<title>(.*?)<\/title>/i); if(t) meta.title = t[1].trim(); }
+      if(!meta.title){ meta.title = filenameFromPath(path); }
+      return { meta, body: html };
+    }
+
+    function filenameFromPath(path){ const n = path.split('/').pop()||''; return decodeURIComponent(n.replace(/^\d{4}-\d{2}-\d{2}-/,'').replace(/\.(md|html)$/i,'')); }
+    function projectFromPath(path){ const parts = path.split('/'); // e.g., notes/projeto-x/file
+      const s = getSettings(); const base = (s.folder||'notes').replace(/^\/+|\/+$/g,'');
+      const i = parts.indexOf(base); if(i>=0 && parts[i+1]) return parts[i+1]; return '';
+    }
+
     // ===== Editor =====
     const quill = new Quill('#editor', {
       theme: 'snow',
@@ -241,41 +335,60 @@
     });
 
     const titleInput = $('#titleInput');
+    const projectSelect = $('#projectSelect');
+    const tagsInput = $('#tagsInput');
     const charCountEl = $('#charCount');
     const lineCountEl = $('#lineCount');
     const fileSizeEl = $('#fileSize');
     const lastSavedEl = $('#lastSaved');
     const lastLocalEl = $('#lastLocal');
+    const projectBadge = $('#projectBadge');
 
     let currentNotePath = storage.get('currentNotePath', null);
     let shaMap = storage.get('shaMap', {});
+    let syncTimer = null;
 
-    function getEditorHTML(){
-      return quill.root.innerHTML.trim();
-    }
-    function getEditorText(){
-      // Quill getText() always ends with a trailing \n; we trim it for accurate counts
-      return quill.getText().replace(/\n+$/,'');
+    function getEditorHTML(){ return quill.root.innerHTML.trim(); }
+    function getEditorText(){ return quill.getText().replace(/\n+$/,''); }
+
+    function getTags(){ return (tagsInput.value||'').split(',').map(t=>t.trim()).filter(Boolean); }
+
+    function buildMarkdownWithFrontMatter(title, tags, project, bodyMd, created){
+      const meta = [
+        `title: ${title}`,
+        `project: ${project}`,
+        `created: ${created||isoNow()}`,
+        `updated: ${isoNow()}`,
+        `tags: [${tags.map(t=>`"${t}"`).join(', ')}]`
+      ].join('\n');
+      return `---\n${meta}\n---\n\n# ${title}\n\n${bodyMd}\n`;
     }
 
-    function getContentToSave(){
-      const format = storage.get('settings', {}).saveFormat || 'markdown';
+    function buildHTMLWithMeta(title, tags, project, bodyHtml, created){
+      const metaJson = JSON.stringify({ title, tags, project, created: created||isoNow(), updated: isoNow() });
+      return `<!doctype html>\n<html lang=\"pt-BR\"><head><meta charset=\"utf-8\"><title>${title}</title><meta name=\"dexnotes\" content='${metaJson.replace(/'/g,'&apos;')}'></head><body><h1>${title}</h1>${bodyHtml}</body></html>`;
+    }
+
+    function getContentToSave(existing){
+      const s = storage.get('settings', {});
+      const format = s.saveFormat || 'markdown';
       const title = titleInput.value?.trim() || 'Sem título';
+      const tags = getTags();
+      const project = projectSelect.value || '';
       const html = getEditorHTML();
+      let created = existing?.created || null;
       if(format === 'html'){
-        const doc = `<!doctype html>\n<html lang=\"pt-BR\"><head><meta charset=\"utf-8\"><title>${title}</title></head><body><h1>${title}</h1>${html}</body></html>`;
-        return { content: doc, ext: 'html' };
+        return { content: buildHTMLWithMeta(title, tags, project, html, created), ext: 'html' };
       } else {
         const td = new TurndownService({ headingStyle: 'atx' });
         const mdBody = td.turndown(html).trim();
-        const md = `# ${title}\n\n${mdBody}\n`;
-        return { content: md, ext: 'md' };
+        return { content: buildMarkdownWithFrontMatter(title, tags, project, mdBody, created), ext: 'md' };
       }
     }
 
     function updateStats(){
       const text = getEditorText();
-      const chars = [...text].length; // grapheme‑aware enough for most cases
+      const chars = [...text].length;
       const lines = text.length ? text.split('\n').length : 0;
       const { content } = getContentToSave();
       const bytes = new TextEncoder().encode(content).length;
@@ -284,22 +397,28 @@
       fileSizeEl.textContent = bytesHuman(bytes);
       lastLocalEl.textContent = storage.get('lastLocal', '–');
       lastSavedEl.textContent = storage.get('lastSaved', '–');
+      projectBadge.textContent = projectSelect.value || '–';
     }
 
     const persistDraft = debounce(()=>{
-      storage.set('draft', { title: titleInput.value||'', delta: quill.getContents(), when: nowFmt() });
+      storage.set('draft', { title: titleInput.value||'', delta: quill.getContents(), tags: getTags(), project: projectSelect.value||'', when: nowFmt() });
       storage.set('lastLocal', nowFmt());
       updateStats();
     }, 400);
 
     quill.on('text-change', persistDraft);
     titleInput.addEventListener('input', persistDraft);
+    tagsInput.addEventListener('input', persistDraft);
+    projectSelect.addEventListener('change', persistDraft);
 
     function loadDraft(){
       const d = storage.get('draft', null);
       if(d){
         titleInput.value = d.title || '';
         try{ quill.setContents(d.delta); } catch{ quill.setText(''); }
+        tagsInput.value = (d.tags||[]).join(', ');
+        if(d.project) ensureProjectOption(d.project);
+        projectSelect.value = d.project||'';
         storage.set('lastLocal', d.when || '–');
       }
       updateStats();
@@ -307,6 +426,7 @@
 
     function newNote(){
       titleInput.value = '';
+      tagsInput.value = '';
       quill.setText('');
       currentNotePath = null;
       storage.set('currentNotePath', null);
@@ -322,7 +442,9 @@
         branch: s.branch || 'main',
         folder: s.folder || 'notes',
         token: s.token || '',
-        saveFormat: s.saveFormat || 'markdown'
+        saveFormat: s.saveFormat || 'markdown',
+        autoSyncMins: Number(s.autoSyncMins||10),
+        autoSaveGit: !!s.autoSaveGit
       };
     }
 
@@ -355,83 +477,141 @@
       } catch(e){ return null; }
     }
 
+    function buildPathForSave(title, ext){
+      const s = getSettings();
+      const slug = slugify(title) || 'nota';
+      const date = new Date().toISOString().slice(0,10);
+      const base = s.folder.replace(/^\/+|\/+$/g,'');
+      const proj = (projectSelect.value||'').replace(/^\/+|\/+$/g,'');
+      return proj ? `${base}/${proj}/${date}-${slug}.${ext}` : `${base}/${date}-${slug}.${ext}`;
+    }
+
     async function saveToGitHub(){
       const s = getSettings();
       if(!(s.owner && s.repo && s.token)){
-        alert('Por favor, configure Owner, Repo e Token em Configurações.');
+        alert('Configure Owner, Repo e Token em Configurações.');
         return;
       }
       const title = titleInput.value?.trim() || 'Sem título';
-      const { content, ext } = getContentToSave();
-      const slug = slugify(title) || 'nota';
-      const date = new Date().toISOString().slice(0,10);
-      const folder = s.folder.replace(/^\/+|\/+$/g,'');
-      const path = currentNotePath || `${folder}/${date}-${slug}.${ext}`;
+      const existing = currentNotePath ? await idbGetNote(currentNotePath) : null;
+      const { content, ext } = getContentToSave(existing);
+      const path = currentNotePath || buildPathForSave(title, ext);
       const sha = await ensureSha(path);
       const message = (sha? 'Atualiza' : 'Adiciona') + ` nota: ${title}`;
 
       const b64 = await base64EncodeUtf8(content);
-      const body = { message, content: b64, branch: s.branch, sha: sha || undefined }; // omit sha se criar
+      const body = { message, content: b64, branch: s.branch, sha: sha || undefined };
       const data = await ghFetch('PUT', `/repos/${s.owner}/${s.repo}/contents/${encodeURIComponent(path)}`, body);
       shaMap[path] = data.content.sha; storage.set('shaMap', shaMap);
       currentNotePath = path; storage.set('currentNotePath', path);
-      const when = nowFmt(); storage.set('lastSaved', when);
-      lastSavedEl.textContent = when;
+      const when = nowFmt(); storage.set('lastSaved', when); lastSavedEl.textContent = when;
       updateStats();
+
+      // Atualiza cache offline
+      await cacheNoteFromContent(path, data.content.sha, content);
       alert('Salvo no GitHub com sucesso!\n\nCaminho: ' + path);
     }
 
-    async function listNotes(){
+    async function fetchBranchTree(){
       const s = getSettings();
-      const folder = s.folder.replace(/^\/+|\/+$/g,'');
-      const data = await ghFetch('GET', `/repos/${s.owner}/${s.repo}/contents/${encodeURIComponent(folder)}?ref=${encodeURIComponent(s.branch)}`);
-      if(!Array.isArray(data)) throw new Error('Pasta de notas não encontrada (ou vazia).');
-      // Filter md/html
-      const items = data.filter(x=>x.type==='file' && (x.name.endsWith('.md') || x.name.endsWith('.html')))
-        .sort((a,b)=> a.name < b.name ? 1 : -1); // nome desc (data no filename ajuda)
-      return items.map(x=>({ name:x.name, path:x.path, sha:x.sha, size:x.size }));
+      const ref = await ghFetch('GET', `/repos/${s.owner}/${s.repo}/git/refs/heads/${encodeURIComponent(s.branch)}`);
+      const commit = await ghFetch('GET', `/repos/${s.owner}/${s.repo}/git/commits/${ref.object.sha}`);
+      const tree = await ghFetch('GET', `/repos/${s.owner}/${s.repo}/git/trees/${commit.tree.sha}?recursive=1`);
+      return tree;
     }
 
-    async function openNotesModal(){
-      $('#openMsg').textContent = '';
-      $('#notesList').innerHTML = '<div class="note-item"><em>Carregando...</em></div>';
-      openModal.classList.add('active');
-      try{
-        const items = await listNotes();
-        const list = $('#notesList'); list.innerHTML='';
-        if(!items.length){ list.innerHTML = '<div class="note-item">Nenhuma nota encontrada. Salve a primeira! :)</div>'; return; }
-        for(const it of items){
-          const el = document.createElement('div'); el.className='note-item';
-          el.innerHTML = `<div><strong>${it.name}</strong><br><small>${it.path}</small></div><small>${bytesHuman(it.size)}</small>`;
-          el.addEventListener('click', ()=> loadNoteFromGitHub(it.path));
-          list.appendChild(el);
+    async function syncFromGitHub(projectFilter=null){
+      const s = getSettings();
+      const base = s.folder.replace(/^\/+|\/+$/g,'') + '/';
+      const tree = await fetchBranchTree();
+      const files = (tree.tree||[]).filter(t => t.type==='blob' && t.path.startsWith(base) && (t.path.endsWith('.md') || t.path.endsWith('.html')));
+      for(const f of files){
+        if(projectFilter){
+          const pf = (projectFilter||'').replace(/^\/+|\/+$/g,'') + '/';
+          if(!f.path.startsWith(base+pf)) continue;
         }
-      }catch(e){ $('#openMsg').textContent = e.message; }
+        const existing = await idbGetNote(f.path);
+        if(existing && existing.sha === f.sha) continue;
+        const data = await ghFetch('GET', `/repos/${s.owner}/${s.repo}/contents/${encodeURIComponent(f.path)}?ref=${encodeURIComponent(s.branch)}`);
+        const content = await base64DecodeUtf8(data.content);
+        await cacheNoteFromContent(f.path, data.sha, content, data.size);
+      }
+      await refreshProjectOptions();
+      $('#openMsg').textContent = `Sincronizado: ${new Date().toLocaleString()}`;
+      renderNotesList();
     }
 
-    async function loadNoteFromGitHub(path){
+    async function cacheNoteFromContent(path, sha, content, size){
+      // Extrai meta
+      let meta, body;
+      if(path.endsWith('.md')){ ({meta, body} = extractMetaFromMarkdown(content, path)); }
+      else { ({meta, body} = extractMetaFromHTML(content, path)); }
+      const note = {
+        path,
+        sha,
+        size: size || new TextEncoder().encode(content).length,
+        content,
+        title: meta.title,
+        tags: meta.tags||[],
+        project: meta.project||projectFromPath(path),
+        created: meta.created||null,
+        updated: meta.updated||null
+      };
+      await idbPutNote(note);
+    }
+
+    // ===== Abrir/Buscar (IndexedDB) =====
+    async function renderNotesList(){
+      const list = $('#notesList'); list.innerHTML='';
+      const q = ($('#searchInput').value||'').trim().toLowerCase();
+      const project = $('#filterProject').value||'';
+      const all = await idbAllNotes();
+      const filtered = all.filter(n=>{
+        if(project && (n.project||'')!==project) return false;
+        if(!q) return true;
+        // tokens por espaço; suportar #tag
+        const tokens = q.split(/\s+/).filter(Boolean);
+        return tokens.every(t=>{
+          if(t.startsWith('#')){
+            const tag = t.slice(1);
+            return (n.tags||[]).some(x=> (x||'').toLowerCase().includes(tag));
+          } else {
+            return (n.title||'').toLowerCase().includes(t) || (n.content||'').toLowerCase().includes(t);
+          }
+        });
+      }).sort((a,b)=> (b.updated||'').localeCompare(a.updated||''));
+
+      if(!filtered.length){ list.innerHTML = '<div class="note-item">Nenhuma nota encontrada no cache offline.</div>'; return; }
+
+      for(const it of filtered){
+        const el = document.createElement('div'); el.className='note-item';
+        const tags = (it.tags||[]).map(t=>`<span class="pill" style="margin-right:6px">#${t}</span>`).join('');
+        el.innerHTML = `<div><strong>${it.title||filenameFromPath(it.path)}</strong><br><small>${it.path}</small><div style="margin-top:6px">${tags}</div></div><small>${bytesHuman(it.size||0)}</small>`;
+        el.addEventListener('click', ()=> loadNote(it.path));
+        list.appendChild(el);
+      }
+    }
+
+    async function loadNote(path){
       try{
-        const s = getSettings();
-        const data = await ghFetch('GET', `/repos/${s.owner}/${s.repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(s.branch)}`);
-        shaMap[path] = data.sha; storage.set('shaMap', shaMap);
-        const content = await base64DecodeUtf8(data.content);
-        // Detect format by extension
+        const cached = await idbGetNote(path);
+        if(!cached){ // fallback GitHub
+          await syncFromGitHub();
+        }
+        const note = await idbGetNote(path);
+        if(!note) throw new Error('Nota não encontrada.');
+
         if(path.endsWith('.html')){
-          // strip our possible wrapper <h1>Title</h1> at top when loading back
-          const withoutTitle = content.replace(/<h1>.*?<\/h1>/i,'');
+          const withoutTitle = note.content.replace(/<h1>.*?<\/h1>/i,'');
           quill.setContents([]); quill.clipboard.dangerouslyPasteHTML(withoutTitle.trim());
-          // Try to set title from filename
-          const name = path.split('/').pop().replace(/\.(html)$/i,'');
-          const pretty = name.replace(/^\d{4}-\d{2}-\d{2}-/,'').replace(/-/g,' ');
-          titleInput.value = decodeURIComponent(pretty);
         } else {
-          // markdown -> html via marked
-          let md = content;
-          // Try to get title from first H1
-          const m = md.match(/^#\s+(.+)$/m); if(m){ titleInput.value = m[1].trim(); }
-          const html = marked.parse(md);
+          const { body } = extractMetaFromMarkdown(note.content, path);
+          const html = marked.parse(body);
           quill.setContents([]); quill.clipboard.dangerouslyPasteHTML(html.trim());
         }
+        titleInput.value = note.title || filenameFromPath(path);
+        tagsInput.value = (note.tags||[]).join(', ');
+        ensureProjectOption(note.project||''); projectSelect.value = note.project||'';
         currentNotePath = path; storage.set('currentNotePath', path);
         storage.set('lastLocal', nowFmt());
         updateStats();
@@ -439,14 +619,41 @@
       }catch(e){ alert('Falha ao carregar nota: '+e.message); }
     }
 
+    // ===== Exportar ZIP =====
+    async function exportZip(){
+      const s = getSettings();
+      const project = $('#filterProject').value||''; // usa filtro atual do modal se aberto
+      const q = ($('#searchInput').value||'').trim().toLowerCase();
+      const all = await idbAllNotes();
+      const base = (s.folder||'notes').replace(/^\/+|\/+$/g,'');
+      const filtered = all.filter(n=>{
+        if(project && (n.project||'')!==project) return false;
+        if(!q) return true;
+        const tokens = q.split(/\s+/).filter(Boolean);
+        return tokens.every(t=>{
+          if(t.startsWith('#')){ const tag=t.slice(1); return (n.tags||[]).some(x=>(x||'').toLowerCase().includes(tag)); }
+          return (n.title||'').toLowerCase().includes(t) || (n.content||'').toLowerCase().includes(t);
+        });
+      });
+      if(!filtered.length){ alert('Nenhuma nota para exportar. Faça uma sincronização ou ajuste o filtro.'); return; }
+      const zip = new JSZip();
+      for(const n of filtered){
+        const rel = n.path.replace(new RegExp('^'+base+'/'), '');
+        zip.file(rel, n.content||'');
+      }
+      const blob = await zip.generateAsync({type:'blob'});
+      saveAs(blob, `dex-notes-export-${new Date().toISOString().slice(0,10)}.zip`);
+    }
+
     // ===== UI Wiring =====
     const settingsModal = $('#settingsModal');
     const openModal = $('#openModal');
     $('#settingsBtn').addEventListener('click', ()=> settingsModal.classList.add('active'));
     $('#closeSettings').addEventListener('click', ()=> settingsModal.classList.remove('active'));
-    $('#openBtn').addEventListener('click', openNotesModal);
+    $('#openBtn').addEventListener('click', async ()=>{ await refreshFiltersUI(); openModal.classList.add('active'); renderNotesList(); });
     $('#closeOpen').addEventListener('click', ()=> openModal.classList.remove('active'));
-    $('#reloadNotes').addEventListener('click', openNotesModal);
+    $('#reloadNotes').addEventListener('click', renderNotesList);
+    $('#syncNow').addEventListener('click', ()=> syncFromGitHub().catch(err=> $('#openMsg').textContent = err.message));
 
     $('#saveSettings').addEventListener('click', ()=>{
       const settings = {
@@ -455,23 +662,28 @@
         branch: $('#ghBranch').value.trim() || 'main',
         folder: $('#ghFolder').value.trim() || 'notes',
         token: $('#ghToken').value.trim(),
-        saveFormat: $('#saveFormat').value
+        saveFormat: $('#saveFormat').value,
+        autoSyncMins: Number($('#autoSyncMins').value||10),
+        autoSaveGit: $('#autoSaveGit').checked
       };
       storage.set('settings', settings);
+      setupAutoSync();
       $('#settingsMsg').textContent = 'Configurações salvas!';
       setTimeout(()=> $('#settingsMsg').textContent = '', 2000);
     });
 
     $('#testConn').addEventListener('click', async ()=>{
-      try{
-        const s = getSettings();
-        const me = await ghFetch('GET', '/user');
-        $('#settingsMsg').textContent = `OK! Autenticado como @${me.login}.`;
-      }catch(e){ $('#settingsMsg').textContent = e.message; }
+      try{ const me = await ghFetch('GET', '/user'); $('#settingsMsg').textContent = `OK! Autenticado como @${me.login}.`; }
+      catch(e){ $('#settingsMsg').textContent = e.message; }
     });
 
     $('#saveBtn').addEventListener('click', ()=> saveToGitHub().catch(err=> alert(err.message)) );
     $('#newBtn').addEventListener('click', newNote);
+    $('#syncBtn').addEventListener('click', ()=> syncFromGitHub().catch(err=> alert(err.message)) );
+    $('#exportBtn').addEventListener('click', exportZip);
+
+    $('#searchInput').addEventListener('input', debounce(renderNotesList, 200));
+    $('#filterProject').addEventListener('change', renderNotesList);
 
     window.addEventListener('keydown', (e)=>{
       if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){ e.preventDefault(); saveToGitHub().catch(err=>alert(err.message)); }
@@ -479,14 +691,61 @@
     });
 
     window.addEventListener('beforeunload', (e)=>{
-      // Soft protection if there are unsaved changes
       const d = storage.get('draft', null);
       if(d){ e.preventDefault(); e.returnValue = ''; }
     });
 
+    // ===== Projects UI =====
+    function ensureProjectOption(name){
+      if(!name) return; const exists = Array.from(projectSelect.options).some(o=>o.value===name);
+      if(!exists){ const opt = document.createElement('option'); opt.value = name; opt.textContent = name; projectSelect.appendChild(opt); }
+    }
+    async function refreshProjectOptions(){
+      const projects = await idbListProjects();
+      const cur = projectSelect.value;
+      projectSelect.innerHTML = '';
+      const def = document.createElement('option'); def.value=''; def.textContent='(sem projeto)'; projectSelect.appendChild(def);
+      for(const p of projects){ const opt=document.createElement('option'); opt.value=p; opt.textContent=p; projectSelect.appendChild(opt); }
+      projectSelect.value = cur || '';
+      await refreshFiltersUI();
+      projectBadge.textContent = projectSelect.value || '–';
+    }
+
+    async function refreshFiltersUI(){
+      const sel = $('#filterProject');
+      const projects = await idbListProjects();
+      const cur = sel.value;
+      sel.innerHTML='';
+      const all = document.createElement('option'); all.value=''; all.textContent='(todos os projetos)'; sel.appendChild(all);
+      for(const p of projects){ const opt=document.createElement('option'); opt.value=p; opt.textContent=p; sel.appendChild(opt); }
+      sel.value = cur || '';
+    }
+
+    $('#addProjectBtn').addEventListener('click', ()=>{
+      const name = prompt('Nome do novo projeto (pasta):');
+      if(name){ ensureProjectOption(name); projectSelect.value = name; persistDraft(); refreshFiltersUI(); }
+    });
+
+    // ===== Auto-sync / Auto-save =====
+    function setupAutoSync(){
+      if(syncTimer) clearInterval(syncTimer);
+      const { autoSyncMins, autoSaveGit } = getSettings();
+      if(autoSyncMins>0){
+        syncTimer = setInterval(async ()=>{
+          try{
+            if(autoSaveGit){
+              const lastLocal = storage.get('lastLocal', null);
+              const lastSaved = storage.get('lastSaved', null);
+              if(lastLocal && lastLocal !== lastSaved){ await saveToGitHub(); }
+            }
+            await syncFromGitHub();
+          }catch(e){ console.warn('Auto-sync falhou:', e.message); }
+        }, autoSyncMins*60*1000);
+      }
+    }
+
     // ===== Initialize =====
-    (function init(){
-      // load settings into inputs
+    (async function init(){
       const s = storage.get('settings', {});
       $('#ghOwner').value = s.owner || '';
       $('#ghRepo').value = s.repo || '';
@@ -494,7 +753,12 @@
       $('#ghFolder').value = s.folder || 'notes';
       $('#ghToken').value = s.token || '';
       $('#saveFormat').value = s.saveFormat || 'markdown';
+      $('#autoSyncMins').value = s.autoSyncMins || 10;
+      $('#autoSaveGit').checked = !!s.autoSaveGit;
+
+      await refreshProjectOptions();
       loadDraft();
+      setupAutoSync();
     })();
   </script>
 </body>
