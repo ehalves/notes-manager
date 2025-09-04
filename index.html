@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dex Notes – Bloco de Notas (GitHub)</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #0f172a;
+      --muted: #cbd5e1;
+      --accent: #22c55e;
+      --accent2: #60a5fa;
+      --danger: #ef4444;
+      --border: #1f2937;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: linear-gradient(180deg, #0a0f1c, #0b1220 40%);
+      color: #e5e7eb;
+    }
+    header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding: 14px 18px; background: rgba(15, 23, 42, .8); border-bottom: 1px solid var(--border); backdrop-filter: blur(6px);
+      position: sticky; top: 0; z-index: 20;
+    }
+    header .brand { display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:.3px; }
+    header .brand .dot { width:10px; height:10px; border-radius:50%; background: var(--accent); box-shadow: 0 0 16px var(--accent); }
+    header .actions { display:flex; gap:8px; }
+    button, .btn {
+      appearance:none; border:1px solid var(--border); background:#111827; color:#e5e7eb;
+      padding:10px 12px; border-radius:12px; cursor:pointer; font-weight:600; transition: .2s ease; box-shadow: var(--shadow);
+    }
+    button:hover { transform: translateY(-1px); border-color:#374151; }
+    button.primary { background: linear-gradient(90deg, var(--accent), #16a34a); border-color: transparent; color:#06110a; }
+    button.secondary { background: linear-gradient(90deg, var(--accent2), #3b82f6); border-color: transparent; color:#0a1424; }
+    button.danger { background: linear-gradient(90deg, var(--danger), #dc2626); border-color: transparent; color:#140909; }
+
+    .container { max-width: 1100px; margin: 16px auto; padding: 0 16px 60px; }
+
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+    .toolbar-wrap { padding: 8px; border-bottom: 1px solid var(--border); background:#0b1220; }
+    #titleInput {
+      width:100%; background:transparent; color:#e5e7eb; border:none; outline:none; font-size:22px; font-weight:700; padding: 16px 16px 10px;
+    }
+    #editor { height: 52vh; }
+
+    .statusbar { display:flex; flex-wrap:wrap; gap:16px; align-items:center; justify-content:space-between; padding:10px 16px; border-top: 1px solid var(--border); background: #0b1220; font-size: 13px; color: var(--muted); }
+    .stats { display:flex; gap:18px; align-items:center; }
+    .stat { opacity:.9; }
+    .green { color: #86efac; }
+    .yellow { color: #fde68a; }
+
+    .pill { padding: 8px 10px; border: 1px solid var(--border); border-radius: 999px; background: #0b1220; }
+
+    .modal { position: fixed; inset: 0; display:none; align-items:center; justify-content:center; background: rgba(2,6,23,.6); backdrop-filter: blur(4px); z-index:50; }
+    .modal.active { display:flex; }
+    .modal-card { width: min(720px, 92vw); background: var(--panel); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); }
+    .modal-card header { position:relative; }
+    .modal-body { padding: 18px; }
+    .grid { display:grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .field { display:flex; flex-direction:column; gap:6px; }
+    label { font-size: 12px; color:#9ca3af; }
+    input[type="text"], input[type="password"], select { background:#0b1220; color:#e5e7eb; border:1px solid var(--border); border-radius: 12px; padding: 10px 12px; }
+
+    .notes-list { display:grid; grid-template-columns: 1fr; gap:10px; max-height: 60vh; overflow:auto; padding: 4px; }
+    .note-item { padding: 10px 12px; border:1px solid var(--border); border-radius: 12px; background:#0b1220; display:flex; align-items:center; justify-content:space-between; cursor:pointer; }
+    .note-item:hover { border-color:#374151; }
+    .note-item small { color:#94a3b8; }
+
+    .help { padding: 14px 18px; background: #0b1220; border: 1px dashed #223047; border-radius: 14px; color:#a5b4fc; }
+    .kbd { display:inline-block; padding:2px 6px; border:1px solid #334155; border-radius:6px; background:#0f172a; font-weight:700; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="dot"></span> Dex Notes</div>
+    <div class="actions">
+      <button id="newBtn" title="Nova nota (Ctrl+N)">Nova</button>
+      <button id="openBtn" class="secondary" title="Abrir nota do GitHub">Abrir</button>
+      <button id="saveBtn" class="primary" title="Salvar no GitHub (Ctrl+S)">Salvar</button>
+      <button id="settingsBtn" title="Configurar GitHub">Configurações</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="help">
+      <strong>Como funciona:</strong> escreva seu texto, formate (negrito, itálico, sublinhado, tachado, link) e salve direto em um repositório no GitHub. As configurações ficam salvas no seu navegador (localStorage). Use <span class="kbd">Ctrl</span>+<span class="kbd">S</span> para salvar e <span class="kbd">Ctrl</span>+<span class="kbd">N</span> para nova nota.
+    </div>
+
+    <div class="card" id="editorCard">
+      <input id="titleInput" placeholder="Título da nota..." autocomplete="off" />
+      <div class="toolbar-wrap">
+        <div id="toolbar">
+          <span class="ql-formats">
+            <button class="ql-bold"></button>
+            <button class="ql-italic"></button>
+            <button class="ql-underline"></button>
+            <button class="ql-strike"></button>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-link"></button>
+            <button class="ql-clean"></button>
+          </span>
+          <span class="ql-formats">
+            <select class="ql-header">
+              <option selected></option>
+              <option value="1"></option>
+              <option value="2"></option>
+              <option value="3"></option>
+            </select>
+          </span>
+          <span class="ql-formats">
+            <button class="ql-list" value="ordered"></button>
+            <button class="ql-list" value="bullet"></button>
+          </span>
+        </div>
+        <div id="editor"></div>
+      </div>
+      <div class="statusbar">
+        <div class="stats">
+          <span class="stat">Caracteres: <strong id="charCount">0</strong></span>
+          <span class="stat">Linhas: <strong id="lineCount">0</strong></span>
+          <span class="stat">Tamanho: <strong id="fileSize">0 B</strong></span>
+        </div>
+        <div>
+          <span class="pill">Última alteração local: <span id="lastLocal">–</span></span>
+          <span class="pill">Último salvamento no GitHub: <span id="lastSaved">–</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Configurações -->
+  <div id="settingsModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <header>
+        <div class="brand" style="padding:12px 18px;">Configurações do GitHub</div>
+      </header>
+      <div class="modal-body">
+        <div class="grid">
+          <div class="field">
+            <label>Dono (owner / usuário ou organização)</label>
+            <input id="ghOwner" type="text" placeholder="ex.: euzebio-alves" />
+          </div>
+          <div class="field">
+            <label>Repositório</label>
+            <input id="ghRepo" type="text" placeholder="ex.: dex-notes" />
+          </div>
+          <div class="field">
+            <label>Branch</label>
+            <input id="ghBranch" type="text" placeholder="main" value="main" />
+          </div>
+          <div class="field">
+            <label>Pasta das notas (caminho dentro do repo)</label>
+            <input id="ghFolder" type="text" placeholder="notes" value="notes" />
+          </div>
+          <div class="field">
+            <label>Formato de salvamento</label>
+            <select id="saveFormat">
+              <option value="markdown" selected>Markdown (.md)</option>
+              <option value="html">HTML (.html)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Token do GitHub (PAT) – escopo: <em>contents: read & write</em></label>
+            <input id="ghToken" type="password" placeholder="ghp_..." />
+          </div>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <button id="testConn" class="secondary">Testar conexão</button>
+          <button id="saveSettings" class="primary">Salvar configurações</button>
+          <button id="closeSettings">Fechar</button>
+        </div>
+        <p style="margin-top:12px; color:#a3e635; font-size:13px;" id="settingsMsg"></p>
+        <p style="margin-top:8px; font-size:12px; color:#9ca3af">Dica de segurança: use um token de acesso pessoal <em>fine‑grained</em> limitado apenas a este repositório, com permissão de <strong>Repository contents: Read/Write</strong>. O token fica salvo somente no seu navegador (localStorage).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Abrir notas -->
+  <div id="openModal" class="modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <header>
+        <div class="brand" style="padding:12px 18px;">Minhas notas (GitHub)</div>
+      </header>
+      <div class="modal-body">
+        <div class="notes-list" id="notesList"></div>
+        <div style="display:flex; gap:8px; margin-top:16px;">
+          <button id="reloadNotes" class="secondary">Recarregar lista</button>
+          <button id="closeOpen">Fechar</button>
+        </div>
+        <p id="openMsg" style="margin-top:12px; color:#a3e635; font-size:13px;"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/turndown@7.2.0/dist/turndown.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+  <script>
+    // ===== Util =====
+    const $ = (sel) => document.querySelector(sel);
+    const nowFmt = () => new Date().toLocaleString();
+    const debounce = (fn, ms=400) => { let t; return (...a)=>{clearTimeout(t); t=setTimeout(()=>fn(...a),ms)} };
+
+    const storage = {
+      get k(){ return 'dexnotes.v1'; },
+      read(){ try{ return JSON.parse(localStorage.getItem(this.k) || '{}'); }catch{ return {}; } },
+      write(data){ localStorage.setItem(this.k, JSON.stringify(data)); },
+      set(path, value){ const s=this.read(); s[path]=value; this.write(s); },
+      get(path, fallback){ const s=this.read(); return s[path] ?? fallback; }
+    };
+
+    function slugify(str){
+      return (str||'').normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/[^\w\s-]/g,'').trim().replace(/\s+/g,'-').toLowerCase().slice(0,80);
+    }
+    function bytesHuman(n){ if(n<1024) return n+" B"; if(n<1024*1024) return (n/1024).toFixed(1)+" KB"; return (n/1024/1024).toFixed(2)+" MB"; }
+
+    async function base64EncodeUtf8(str){
+      const buf = new TextEncoder().encode(str);
+      const binary = Array.from(buf, b => String.fromCharCode(b)).join('');
+      return btoa(binary);
+    }
+    async function base64DecodeUtf8(b64){
+      const binary = atob(b64);
+      const buf = new Uint8Array([...binary].map(ch=>ch.charCodeAt(0)));
+      return new TextDecoder().decode(buf);
+    }
+
+    // ===== Editor =====
+    const quill = new Quill('#editor', {
+      theme: 'snow',
+      placeholder: 'Escreva suas anotações aqui... Use Ctrl+S para salvar no GitHub.',
+      modules: { toolbar: '#toolbar' }
+    });
+
+    const titleInput = $('#titleInput');
+    const charCountEl = $('#charCount');
+    const lineCountEl = $('#lineCount');
+    const fileSizeEl = $('#fileSize');
+    const lastSavedEl = $('#lastSaved');
+    const lastLocalEl = $('#lastLocal');
+
+    let currentNotePath = storage.get('currentNotePath', null);
+    let shaMap = storage.get('shaMap', {});
+
+    function getEditorHTML(){
+      return quill.root.innerHTML.trim();
+    }
+    function getEditorText(){
+      // Quill getText() always ends with a trailing \n; we trim it for accurate counts
+      return quill.getText().replace(/\n+$/,'');
+    }
+
+    function getContentToSave(){
+      const format = storage.get('settings', {}).saveFormat || 'markdown';
+      const title = titleInput.value?.trim() || 'Sem título';
+      const html = getEditorHTML();
+      if(format === 'html'){
+        const doc = `<!doctype html>\n<html lang=\"pt-BR\"><head><meta charset=\"utf-8\"><title>${title}</title></head><body><h1>${title}</h1>${html}</body></html>`;
+        return { content: doc, ext: 'html' };
+      } else {
+        const td = new TurndownService({ headingStyle: 'atx' });
+        const mdBody = td.turndown(html).trim();
+        const md = `# ${title}\n\n${mdBody}\n`;
+        return { content: md, ext: 'md' };
+      }
+    }
+
+    function updateStats(){
+      const text = getEditorText();
+      const chars = [...text].length; // grapheme‑aware enough for most cases
+      const lines = text.length ? text.split('\n').length : 0;
+      const { content } = getContentToSave();
+      const bytes = new TextEncoder().encode(content).length;
+      charCountEl.textContent = String(chars);
+      lineCountEl.textContent = String(lines);
+      fileSizeEl.textContent = bytesHuman(bytes);
+      lastLocalEl.textContent = storage.get('lastLocal', '–');
+      lastSavedEl.textContent = storage.get('lastSaved', '–');
+    }
+
+    const persistDraft = debounce(()=>{
+      storage.set('draft', { title: titleInput.value||'', delta: quill.getContents(), when: nowFmt() });
+      storage.set('lastLocal', nowFmt());
+      updateStats();
+    }, 400);
+
+    quill.on('text-change', persistDraft);
+    titleInput.addEventListener('input', persistDraft);
+
+    function loadDraft(){
+      const d = storage.get('draft', null);
+      if(d){
+        titleInput.value = d.title || '';
+        try{ quill.setContents(d.delta); } catch{ quill.setText(''); }
+        storage.set('lastLocal', d.when || '–');
+      }
+      updateStats();
+    }
+
+    function newNote(){
+      titleInput.value = '';
+      quill.setText('');
+      currentNotePath = null;
+      storage.set('currentNotePath', null);
+      updateStats();
+    }
+
+    // ===== GitHub API =====
+    function getSettings(){
+      const s = storage.get('settings', {});
+      return {
+        owner: s.owner || '',
+        repo: s.repo || '',
+        branch: s.branch || 'main',
+        folder: s.folder || 'notes',
+        token: s.token || '',
+        saveFormat: s.saveFormat || 'markdown'
+      };
+    }
+
+    async function ghFetch(method, path, body){
+      const { token } = getSettings();
+      if(!token) throw new Error('Configure seu token do GitHub nas Configurações.');
+      const url = `https://api.github.com${path}`;
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Accept': 'application/vnd.github+json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: body ? JSON.stringify(body) : undefined
+      });
+      if(!res.ok){
+        const text = await res.text();
+        throw new Error(`GitHub ${res.status}: ${text}`);
+      }
+      return res.json();
+    }
+
+    async function ensureSha(path){
+      if(shaMap[path]) return shaMap[path];
+      try {
+        const { owner, repo, branch } = getSettings();
+        const data = await ghFetch('GET', `/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(branch)}`);
+        shaMap[path] = data.sha; storage.set('shaMap', shaMap);
+        return data.sha;
+      } catch(e){ return null; }
+    }
+
+    async function saveToGitHub(){
+      const s = getSettings();
+      if(!(s.owner && s.repo && s.token)){
+        alert('Por favor, configure Owner, Repo e Token em Configurações.');
+        return;
+      }
+      const title = titleInput.value?.trim() || 'Sem título';
+      const { content, ext } = getContentToSave();
+      const slug = slugify(title) || 'nota';
+      const date = new Date().toISOString().slice(0,10);
+      const folder = s.folder.replace(/^\/+|\/+$/g,'');
+      const path = currentNotePath || `${folder}/${date}-${slug}.${ext}`;
+      const sha = await ensureSha(path);
+      const message = (sha? 'Atualiza' : 'Adiciona') + ` nota: ${title}`;
+
+      const b64 = await base64EncodeUtf8(content);
+      const body = { message, content: b64, branch: s.branch, sha: sha || undefined }; // omit sha se criar
+      const data = await ghFetch('PUT', `/repos/${s.owner}/${s.repo}/contents/${encodeURIComponent(path)}`, body);
+      shaMap[path] = data.content.sha; storage.set('shaMap', shaMap);
+      currentNotePath = path; storage.set('currentNotePath', path);
+      const when = nowFmt(); storage.set('lastSaved', when);
+      lastSavedEl.textContent = when;
+      updateStats();
+      alert('Salvo no GitHub com sucesso!\n\nCaminho: ' + path);
+    }
+
+    async function listNotes(){
+      const s = getSettings();
+      const folder = s.folder.replace(/^\/+|\/+$/g,'');
+      const data = await ghFetch('GET', `/repos/${s.owner}/${s.repo}/contents/${encodeURIComponent(folder)}?ref=${encodeURIComponent(s.branch)}`);
+      if(!Array.isArray(data)) throw new Error('Pasta de notas não encontrada (ou vazia).');
+      // Filter md/html
+      const items = data.filter(x=>x.type==='file' && (x.name.endsWith('.md') || x.name.endsWith('.html')))
+        .sort((a,b)=> a.name < b.name ? 1 : -1); // nome desc (data no filename ajuda)
+      return items.map(x=>({ name:x.name, path:x.path, sha:x.sha, size:x.size }));
+    }
+
+    async function openNotesModal(){
+      $('#openMsg').textContent = '';
+      $('#notesList').innerHTML = '<div class="note-item"><em>Carregando...</em></div>';
+      openModal.classList.add('active');
+      try{
+        const items = await listNotes();
+        const list = $('#notesList'); list.innerHTML='';
+        if(!items.length){ list.innerHTML = '<div class="note-item">Nenhuma nota encontrada. Salve a primeira! :)</div>'; return; }
+        for(const it of items){
+          const el = document.createElement('div'); el.className='note-item';
+          el.innerHTML = `<div><strong>${it.name}</strong><br><small>${it.path}</small></div><small>${bytesHuman(it.size)}</small>`;
+          el.addEventListener('click', ()=> loadNoteFromGitHub(it.path));
+          list.appendChild(el);
+        }
+      }catch(e){ $('#openMsg').textContent = e.message; }
+    }
+
+    async function loadNoteFromGitHub(path){
+      try{
+        const s = getSettings();
+        const data = await ghFetch('GET', `/repos/${s.owner}/${s.repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(s.branch)}`);
+        shaMap[path] = data.sha; storage.set('shaMap', shaMap);
+        const content = await base64DecodeUtf8(data.content);
+        // Detect format by extension
+        if(path.endsWith('.html')){
+          // strip our possible wrapper <h1>Title</h1> at top when loading back
+          const withoutTitle = content.replace(/<h1>.*?<\/h1>/i,'');
+          quill.setContents([]); quill.clipboard.dangerouslyPasteHTML(withoutTitle.trim());
+          // Try to set title from filename
+          const name = path.split('/').pop().replace(/\.(html)$/i,'');
+          const pretty = name.replace(/^\d{4}-\d{2}-\d{2}-/,'').replace(/-/g,' ');
+          titleInput.value = decodeURIComponent(pretty);
+        } else {
+          // markdown -> html via marked
+          let md = content;
+          // Try to get title from first H1
+          const m = md.match(/^#\s+(.+)$/m); if(m){ titleInput.value = m[1].trim(); }
+          const html = marked.parse(md);
+          quill.setContents([]); quill.clipboard.dangerouslyPasteHTML(html.trim());
+        }
+        currentNotePath = path; storage.set('currentNotePath', path);
+        storage.set('lastLocal', nowFmt());
+        updateStats();
+        openModal.classList.remove('active');
+      }catch(e){ alert('Falha ao carregar nota: '+e.message); }
+    }
+
+    // ===== UI Wiring =====
+    const settingsModal = $('#settingsModal');
+    const openModal = $('#openModal');
+    $('#settingsBtn').addEventListener('click', ()=> settingsModal.classList.add('active'));
+    $('#closeSettings').addEventListener('click', ()=> settingsModal.classList.remove('active'));
+    $('#openBtn').addEventListener('click', openNotesModal);
+    $('#closeOpen').addEventListener('click', ()=> openModal.classList.remove('active'));
+    $('#reloadNotes').addEventListener('click', openNotesModal);
+
+    $('#saveSettings').addEventListener('click', ()=>{
+      const settings = {
+        owner: $('#ghOwner').value.trim(),
+        repo: $('#ghRepo').value.trim(),
+        branch: $('#ghBranch').value.trim() || 'main',
+        folder: $('#ghFolder').value.trim() || 'notes',
+        token: $('#ghToken').value.trim(),
+        saveFormat: $('#saveFormat').value
+      };
+      storage.set('settings', settings);
+      $('#settingsMsg').textContent = 'Configurações salvas!';
+      setTimeout(()=> $('#settingsMsg').textContent = '', 2000);
+    });
+
+    $('#testConn').addEventListener('click', async ()=>{
+      try{
+        const s = getSettings();
+        const me = await ghFetch('GET', '/user');
+        $('#settingsMsg').textContent = `OK! Autenticado como @${me.login}.`;
+      }catch(e){ $('#settingsMsg').textContent = e.message; }
+    });
+
+    $('#saveBtn').addEventListener('click', ()=> saveToGitHub().catch(err=> alert(err.message)) );
+    $('#newBtn').addEventListener('click', newNote);
+
+    window.addEventListener('keydown', (e)=>{
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='s'){ e.preventDefault(); saveToGitHub().catch(err=>alert(err.message)); }
+      if((e.ctrlKey||e.metaKey) && e.key.toLowerCase()==='n'){ e.preventDefault(); newNote(); }
+    });
+
+    window.addEventListener('beforeunload', (e)=>{
+      // Soft protection if there are unsaved changes
+      const d = storage.get('draft', null);
+      if(d){ e.preventDefault(); e.returnValue = ''; }
+    });
+
+    // ===== Initialize =====
+    (function init(){
+      // load settings into inputs
+      const s = storage.get('settings', {});
+      $('#ghOwner').value = s.owner || '';
+      $('#ghRepo').value = s.repo || '';
+      $('#ghBranch').value = s.branch || 'main';
+      $('#ghFolder').value = s.folder || 'notes';
+      $('#ghToken').value = s.token || '';
+      $('#saveFormat').value = s.saveFormat || 'markdown';
+      loadDraft();
+    })();
+  </script>
+</body>
+</html>
