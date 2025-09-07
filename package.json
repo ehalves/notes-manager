@@ -1,5 +1,6 @@
 {
   "name": "notepad-web",
+  "homepage": "https://ehalves.github.io/notes-manager/",
   "private": true,
   "version": "0.0.0",
   "type": "module",
