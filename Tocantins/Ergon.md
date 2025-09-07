@@ -1,6 +1,6 @@
 ---
 title: Ergon
-subjects: Integração entre Ergon e SGE
+subjects: IntegraÃ§Ã£o entre Ergon e SGE
 participants:
   - Pedro Lopes
 date: ''
