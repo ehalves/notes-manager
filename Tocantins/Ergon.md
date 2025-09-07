@@ -42,4 +42,4 @@ A implementação efetiva de um dashboard de RH requer:
 \- Atualização regular dos dados
 \- Interface intuitiva e customizável
 \- Relatórios automatizados
-Com estas informações centralizadas, gestores podem tomar decisões mais assertivas e estratégicas, contribuindo para o desenvolvimento sustentável da organização e a gestão eficiente do capital humano. 
+Com estas informações centralizadas, gestores podem tomar decisões mais assertivas e estratégicas, contribuindo para o desenvolvimento sustentável da organização e a gestão eficiente do capital humano.
